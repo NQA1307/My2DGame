@@ -3,26 +3,180 @@ package com.example.my2dgame;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.util.Log;
 
-public class Player extends GameObject {
+public class Player {
+    private float x, y;
+    private final Bitmap bitmap;
     private float speed;
+    private float dx, dy;
     private boolean movingUp, movingDown, movingLeft, movingRight;
+    private int health = 100;
+    private int armor = 50;
+    private int shield = 0;
+    private int gold = 0;
+    private WeaponType currentWeapon = WeaponType.FIREBALL;
+
+    private boolean isInvincible = false;
+    private long invincibilityEndTime = 0;
 
     public Player(float x, float y, Bitmap bitmap, float speed) {
-        super(x, y, bitmap);
+        this.x = x;
+        this.y = y;
+        this.bitmap = bitmap;
         this.speed = speed;
-        this.movingUp = this.movingDown = this.movingLeft = this.movingRight = false;
+        this.dx = 0;
+        this.dy = 0;
     }
 
-    public void update(float screenWidth, float screenHeight) {
-        if (movingUp && y > 0) y -= speed;
-        if (movingDown && y < screenHeight - getHeight()) y += speed;
-        if (movingLeft && x > 0) x -= speed;
-        if (movingRight && x < screenWidth - getWidth()) x += speed;
+    public void update(int screenWidth, int screenHeight) {
+        dx = 0;
+        dy = 0;
+        if (movingUp) dy = -speed;
+        if (movingDown) dy = speed;
+        if (movingLeft) dx = -speed;
+        if (movingRight) dx = speed;
+
+        x += dx;
+        y += dy;
+        if (x < 0) x = 0;
+        if (bitmap != null && x > screenWidth - bitmap.getWidth()) x = screenWidth - bitmap.getWidth();
+        if (y < 0) y = 0;
+        if (bitmap != null && y > screenHeight - bitmap.getHeight()) y = screenHeight - bitmap.getHeight();
+
+        if (shield > 0) shield--;
+
+        if (isInvincible && System.currentTimeMillis() > invincibilityEndTime) {
+            isInvincible = false;
+            Log.d("Player", "Invincibility ended");
+        }
+    }
+
+    public void draw(Canvas canvas, Paint paint) {
+        if (bitmap != null) canvas.drawBitmap(bitmap, x, y, paint);
+        // Optionally, draw an invincibility effect around the player here if desired
     }
 
     public void setMovingUp(boolean movingUp) { this.movingUp = movingUp; }
     public void setMovingDown(boolean movingDown) { this.movingDown = movingDown; }
     public void setMovingLeft(boolean movingLeft) { this.movingLeft = movingLeft; }
     public void setMovingRight(boolean movingRight) { this.movingRight = movingRight; }
+
+    public void applyItemEffect(ItemType itemType) {
+        switch (itemType) {
+            case HEALTH_POTION: // This case can be used for direct health item if needed
+                health = Math.min(100, health + 25);
+                break;
+            case ARMOR_UP:
+                armor = Math.min(100, armor + 20);
+                break;
+            case SHIELD_PICKUP:
+                shield = Math.max(shield, 300); // Set shield to a fixed duration (e.g., 300 frames)
+                break;
+            case SPEED_BOOST:
+                speed += 2;
+                break;
+            case WEAPON_FIREBALL:
+                switchAttack(WeaponType.FIREBALL);
+                break;
+            case WEAPON_BOMB:
+                switchAttack(WeaponType.BOMB_DROP);
+                break;
+            case GOLD_COIN:
+                gold += 10;
+                break;
+            case CLONE_POWERUP:
+                Log.d("Player", "Player picked up CLONE_POWERUP");
+                break;
+            case ENEMY_TRAP_ITEM: // This might be obsolete if traps are fully removed
+                health = Math.max(0, health - 10);
+                Log.d("Player", "Player stepped on an ENEMY_TRAP_ITEM!");
+                break;
+        }
+    }
+
+    public void applyGenericEffect(String effectType, int value) {
+        switch (effectType) {
+            case "health":
+                health = Math.max(0, Math.min(100, health + value));
+                Log.d("Player", "Health changed by " + value + ". New health: " + health);
+                break;
+            case "armor":
+                armor = Math.max(0, Math.min(100, armor + value));
+                Log.d("Player", "Armor changed by " + value + ". New armor: " + armor);
+                break;
+            case "shield":
+                shield = Math.max(0, shield + value); // value here could be frames of shield
+                Log.d("Player", "Shield changed by " + value + ". New shield duration: " + shield);
+                break;
+            case "gold":
+                gold += value;
+                Log.d("Player", "Gold changed by " + value + ". New gold: " + gold);
+                break;
+            case "speed":
+                speed += value;
+                Log.d("Player", "Speed changed by " + value + ". New speed: " + speed);
+                break;
+        }
+    }
+
+    public Projectile createAttack(Bitmap projectileBitmap, Bitmap meleeBitmap, Bitmap bombBitmap, float projectileSpeed) {
+        if (currentWeapon == null) return null;
+
+        float attackX, attackY;
+
+        switch (currentWeapon) {
+            case FIREBALL:
+                if (projectileBitmap == null) {
+                    Log.w("Player", "Cannot create FIREBALL, projectileBitmap is null");
+                    return null;
+                }
+                attackX = x + getWidth();
+                attackY = y + (getHeight() / 2.0f) - (projectileBitmap.getHeight() / 2.0f);
+                return new Projectile(attackX, attackY, projectileBitmap, projectileSpeed, ProjectileType.PLAYER_FIREBALL);
+            case BOMB_DROP:
+                if (bombBitmap == null) {
+                     Log.w("Player", "Cannot create BOMB_DROP, bombBitmap is null");
+                    return null;
+                }
+                attackX = x + getWidth()/2.0f - bombBitmap.getWidth() / 2.0f;
+                attackY = y + getHeight();
+                return new Bomb(attackX, attackY, bombBitmap, 0, ProjectileType.PLAYER_SUPER_BOMB);
+            case SWORD_SLASH:
+                if (meleeBitmap == null) {
+                    Log.w("Player", "Cannot create SWORD_SLASH, meleeBitmap is null");
+                    return null;
+                }
+                attackX = x + getWidth() - meleeBitmap.getWidth()/2;
+                attackY = y + (getHeight() / 2.0f) - (meleeBitmap.getHeight() / 2.0f);
+                Projectile melee = new Projectile(attackX, attackY, meleeBitmap, 0, ProjectileType.PLAYER_SWORD_WAVE);
+                return melee;
+            default:
+                return null;
+        }
+    }
+
+    public void switchAttack(WeaponType type) {
+        this.currentWeapon = type;
+        Log.d("Player", "Player switched to weapon: " + type);
+    }
+
+    public void activateInvincibility(int durationSeconds) {
+        this.isInvincible = true;
+        this.invincibilityEndTime = System.currentTimeMillis() + durationSeconds * 1000L;
+        Log.d("Player", "Invincibility activated for " + durationSeconds + " seconds.");
+    }
+
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public float getWidth() { return bitmap != null ? bitmap.getWidth() : 0; }
+    public float getHeight() { return bitmap != null ? bitmap.getHeight() : 0; }
+    public int getHealth() { return health; }
+    public int getArmor() { return armor; }
+    public int getShield() { return shield; } // Represents frames of shield active
+    public int getGold() { return gold; }
+    public float getSpeed() { return speed; }
+    public boolean isShieldActive() { return shield > 0; }
+    public WeaponType getCurrentWeapon() { return currentWeapon; }
+    public boolean isInvincible() { return isInvincible; }
 }
