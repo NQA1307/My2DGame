@@ -54,7 +54,6 @@ public class Player {
 
     public void draw(Canvas canvas, Paint paint) {
         if (bitmap != null) canvas.drawBitmap(bitmap, x, y, paint);
-        // Optionally, draw an invincibility effect around the player here if desired
     }
 
     public void setMovingUp(boolean movingUp) { this.movingUp = movingUp; }
@@ -64,33 +63,17 @@ public class Player {
 
     public void applyItemEffect(ItemType itemType) {
         switch (itemType) {
-            case HEALTH_POTION: // This case can be used for direct health item if needed
-                health = Math.min(100, health + 25);
+            case HEART:
+                applyGenericEffect("health", 25); // Use generic effect for consistency
+                Log.d("Player", "Heart item picked up. Health +25");
                 break;
-            case ARMOR_UP:
-                armor = Math.min(100, armor + 20);
+            case SHIELD:
+                this.shield = 300; // 5 seconds at 60 FPS
+                Log.d("Player", "Shield item picked up. Shield activated for 300 frames.");
                 break;
-            case SHIELD_PICKUP:
-                shield = Math.max(shield, 300); // Set shield to a fixed duration (e.g., 300 frames)
-                break;
-            case SPEED_BOOST:
-                speed += 2;
-                break;
-            case WEAPON_FIREBALL:
-                switchAttack(WeaponType.FIREBALL);
-                break;
-            case WEAPON_BOMB:
-                switchAttack(WeaponType.BOMB_DROP);
-                break;
-            case GOLD_COIN:
-                gold += 10;
-                break;
-            case CLONE_POWERUP:
-                Log.d("Player", "Player picked up CLONE_POWERUP");
-                break;
-            case ENEMY_TRAP_ITEM: // This might be obsolete if traps are fully removed
-                health = Math.max(0, health - 10);
-                Log.d("Player", "Player stepped on an ENEMY_TRAP_ITEM!");
+            case INVINCIBILITY:
+                activateInvincibility(5); // 5 seconds
+                Log.d("Player", "Invincibility item picked up.");
                 break;
         }
     }
@@ -106,7 +89,7 @@ public class Player {
                 Log.d("Player", "Armor changed by " + value + ". New armor: " + armor);
                 break;
             case "shield":
-                shield = Math.max(0, shield + value); // value here could be frames of shield
+                shield = Math.max(0, shield + value);
                 Log.d("Player", "Shield changed by " + value + ". New shield duration: " + shield);
                 break;
             case "gold":
@@ -173,7 +156,7 @@ public class Player {
     public float getHeight() { return bitmap != null ? bitmap.getHeight() : 0; }
     public int getHealth() { return health; }
     public int getArmor() { return armor; }
-    public int getShield() { return shield; } // Represents frames of shield active
+    public int getShield() { return shield; }
     public int getGold() { return gold; }
     public float getSpeed() { return speed; }
     public boolean isShieldActive() { return shield > 0; }

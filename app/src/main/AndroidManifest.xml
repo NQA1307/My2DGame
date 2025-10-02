@@ -9,8 +9,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.My2DGame">
+
         <activity
-            android:name=".MainActivity"
+            android:name=".WaitingRoomActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:configChanges="orientation|keyboardHidden|screenSize">
@@ -19,5 +20,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize"/>
+            
+        <activity
+            android:name=".HighScoreActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize"/>
+            
     </application>
 </manifest>
